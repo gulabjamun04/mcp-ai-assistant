@@ -277,6 +277,7 @@ python scripts/test_docker.py
 ```
 
 ---
+
 Key Features
 
 Runtime Tool Discovery — Agent auto-registers MCP servers via SSE and binds JSON-schema-defined tools dynamically.
@@ -292,6 +293,7 @@ Production Observability — Prometheus metrics (8 instruments) with Grafana das
 Cache Optimization Layer — Redis TTL-based caching reduces redundant LLM and tool execution.
 
 Structured Logging & Analytics — PostgreSQL-backed invocation logging with analytics endpoints.
+
 ---
 
 ## Screenshots
