@@ -328,9 +328,5 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 **Shivesh Dave**
 
-## Author
-
-**Shivesh Dave**
-
 [![GitHub](https://img.shields.io/badge/GitHub-gulabjamun04-181717?logo=github)](https://github.com/gulabjamun04)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-shivesh--dave-0A66C2?logo=linkedin)](https://www.linkedin.com/in/shivesh-dave-835b4b1b6/)
