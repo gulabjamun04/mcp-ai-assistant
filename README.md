@@ -315,6 +315,7 @@ Session metrics, tool usage breakdown, and recent activity — all powered by Po
 Real-time observability: tool latency, cache hit rates, HTTP performance, and active sessions.
 
 ![Grafana Dashboard](docs/images/grafana-dashboard.png)
+
 ---
 Monitoring & Observability
 
@@ -332,15 +333,16 @@ Tool Success Rate (per tool)
 
 Average Tool Latency
 
-Invocation Rate (5m rolling)
+Invocation Rate 
 
 HTTP Request Rate
 
 Response Time Percentiles (P50 / P95 / P99)
 
-Error Rate (tool + 5xx)
+Error Rate 
 
 All metrics are exposed via /metrics and scraped by Prometheus.
+
 ---
 
 ### Dynamic Tool Discovery
