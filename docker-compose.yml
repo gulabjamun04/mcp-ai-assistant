@@ -1,0 +1,244 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama
+    container_name: mcp-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - mcp-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mcp-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - mcp-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: mcp-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mcp_assistant
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - mcp-network
+
+  # ---------------------------------------------------------------------------
+  # MCP Servers
+  # ---------------------------------------------------------------------------
+  mcp-note-manager:
+    build:
+      context: .
+      dockerfile: mcp_servers/note_manager/Dockerfile
+    container_name: mcp-note-manager
+    ports:
+      - "8001:8001"
+    volumes:
+      - notes-data:/app/mcp_servers/note_manager
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost', 8001), 2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mcp-network
+
+  mcp-web-search:
+    build:
+      context: .
+      dockerfile: mcp_servers/web_search/Dockerfile
+    container_name: mcp-web-search
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost', 8002), 2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mcp-network
+
+  mcp-doc-summarizer:
+    build:
+      context: .
+      dockerfile: mcp_servers/doc_summarizer/Dockerfile
+    container_name: mcp-doc-summarizer
+    ports:
+      - "8003:8003"
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen3:1.7b
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost', 8003), 2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mcp-network
+
+  mcp-calculator:
+    build:
+      context: .
+      dockerfile: mcp_servers/calculator/Dockerfile
+    container_name: mcp-calculator
+    ports:
+      - "8004:8004"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost', 8004), 2); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mcp-network
+
+  # ---------------------------------------------------------------------------
+  # Core Agent
+  # ---------------------------------------------------------------------------
+  agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    container_name: mcp-agent
+    ports:
+      - "8000:8000"
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen3:1.7b
+      MCP_NOTE_MANAGER_URL: http://mcp-note-manager:8001
+      MCP_WEB_SEARCH_URL: http://mcp-web-search:8002
+      MCP_DOC_SUMMARIZER_URL: http://mcp-doc-summarizer:8003
+      MCP_CALCULATOR_URL: http://mcp-calculator:8004
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/mcp_assistant
+    depends_on:
+      ollama:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mcp-note-manager:
+        condition: service_healthy
+      mcp-web-search:
+        condition: service_healthy
+      mcp-doc-summarizer:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - mcp-network
+
+  # ---------------------------------------------------------------------------
+  # UI
+  # ---------------------------------------------------------------------------
+  ui:
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    container_name: mcp-ui
+    ports:
+      - "8501:8501"
+    environment:
+      AGENT_API_URL: http://agent:8000
+    depends_on:
+      agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8501/_stcore/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - mcp-network
+
+  # ---------------------------------------------------------------------------
+  # Monitoring
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus
+    container_name: mcp-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mcp-network
+
+  grafana:
+    image: grafana/grafana
+    container_name: mcp-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - mcp-network
+
+# ---------------------------------------------------------------------------
+# Volumes & Networks
+# ---------------------------------------------------------------------------
+volumes:
+  postgres-data:
+  ollama-models:
+  notes-data:
+
+networks:
+  mcp-network:
+    driver: bridge
