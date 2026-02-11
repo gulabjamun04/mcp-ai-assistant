@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/gulabjamun04/mcp-ai-assistant/pulls)
 
-An AI assistant where **tools are discovered at runtime, not hard-coded**. New capabilities can be added by starting a container — no agent restarts, no code changes, no redeployment.
+A modular, production-grade AI agent platform with runtime tool discovery, multi-tool orchestration, and full-stack observability. New capabilities can be added by starting a container — no agent restarts, no code changes, no redeployment.
 
 Built on [Anthropic's Model Context Protocol (MCP)](https://modelcontextprotocol.io/), this project demonstrates a production-grade architecture for pluggable AI tooling: a LangChain ReAct agent discovers MCP-compatible tool servers over the network, builds LangChain-compatible tool bindings on the fly, and orchestrates multi-step tool chains to answer user queries.
 
@@ -277,6 +277,22 @@ python scripts/test_docker.py
 ```
 
 ---
+Key Features
+
+Runtime Tool Discovery — Agent auto-registers MCP servers via SSE and binds JSON-schema-defined tools dynamically.
+
+Zero-Downtime Extensibility — New tool containers are detected and usable within seconds, no agent restart required.
+
+Multi-Step Tool Orchestration — ReAct agent sequences up to 3+ tools per query (e.g., search → summarize → persist).
+
+Distributed Architecture — 4 isolated MCP servers exposing 13 tools across 10 Docker containers.
+
+Production Observability — Prometheus metrics (8 instruments) with Grafana dashboards covering latency (P50/P95/P99), tool success rate, cache metrics, and HTTP throughput.
+
+Cache Optimization Layer — Redis TTL-based caching reduces redundant LLM and tool execution.
+
+Structured Logging & Analytics — PostgreSQL-backed invocation logging with analytics endpoints.
+---
 
 ## Screenshots
 
@@ -297,6 +313,33 @@ Session metrics, tool usage breakdown, and recent activity — all powered by Po
 Real-time observability: tool latency, cache hit rates, HTTP performance, and active sessions.
 
 ![Grafana Dashboard](docs/images/grafana-dashboard.png)
+---
+Monitoring & Observability
+
+The auto-provisioned MCP AI Assistant Grafana dashboard includes:
+
+Total Tool Invocations
+
+Active Sessions
+
+Cache Hit Ratio
+
+Available Tool Count
+
+Tool Success Rate (per tool)
+
+Average Tool Latency
+
+Invocation Rate (5m rolling)
+
+HTTP Request Rate
+
+Response Time Percentiles (P50 / P95 / P99)
+
+Error Rate (tool + 5xx)
+
+All metrics are exposed via /metrics and scraped by Prometheus.
+---
 
 ### Dynamic Tool Discovery
 
