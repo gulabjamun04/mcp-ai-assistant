@@ -46,7 +46,7 @@ Built on [Anthropic's Model Context Protocol (MCP)](https://modelcontextprotocol
 | Layer           | Technology            | Purpose                                   |
 | --------------- | --------------------- | ----------------------------------------- |
 | LLM             | Ollama + Qwen3:1.7b   | Local inference, tool calling             |
-| Agent Framework | LangChain + LangGraph | ReAct agent with tool orchestration       |
+| Agent Framework | LangChain             | ReAct agent with tool orchestration       |
 | API             | FastAPI               | Async REST API for the agent              |
 | Tool Protocol   | MCP (SSE transport)   | Standardized tool discovery and execution |
 | UI              | Streamlit             | Chat interface with analytics dashboard   |
